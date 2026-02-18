@@ -52,7 +52,6 @@ CATEGORIES = [
 MARKUP_CATEGORY = ReplyKeyboardMarkup(CATEGORIES, one_time_keyboard=True, resize_keyboard=True, input_field_placeholder="Type custom category...")
 
 # --- Analysis Helper ---
-# --- Analysis Helper ---
 def get_date_range(filter_type):
     now = datetime.utcnow()
     if filter_type == 'day':
@@ -111,6 +110,17 @@ async def generate_report(user_id, filter_type):
     except Exception as e:
         return f"Error generating report: {e}"
 
+# --- Handler Functions ---
+
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Start command handler."""
+    user = update.effective_user.first_name
+    await update.message.reply_text(
+        f"👋 <b>Hi {user}!</b>\nType <code>100 Food</code> to add expense.",
+        reply_markup=MARKUP_MAIN,
+        parse_mode=ParseMode.HTML
+    )
+
 async def analysis_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Shows analysis options."""
     keyboard = [
@@ -118,7 +128,6 @@ async def analysis_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
          InlineKeyboardButton("🗓️ This Week", callback_data='report_week')],
         [InlineKeyboardButton("📆 This Month", callback_data='report_month'),
          InlineKeyboardButton("📂 All Time", callback_data='report_all')],
-        # Add a specific category drill-down button if needed later
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
     await update.message.reply_text(
@@ -140,9 +149,8 @@ async def report_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
         await query.edit_message_text(text=report, parse_mode=ParseMode.HTML, reply_markup=query.message.reply_markup)
     except Exception:
-        pass # Ignore message not modified errors
+        pass 
 
-# --- Smart Add Logic ---
 async def smart_add_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = update.message.text.strip()
     
@@ -186,7 +194,6 @@ async def smart_add_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             
     return ConversationHandler.END
 
-
 async def finish_category(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = update.message.text
     if text == "🔙 Cancel":
@@ -206,7 +213,6 @@ async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("Cancelled", reply_markup=MARKUP_MAIN)
     return ConversationHandler.END
 
-# --- Standard Handlers ---
 async def handle_list(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     with app.app_context():
@@ -227,6 +233,7 @@ async def handle_total(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(f"💰 <b>Total All Time:</b> {total:,.2f}", parse_mode=ParseMode.HTML)
 
 async def delete_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Delete handler."""
     try:
         eid = int(update.message.text.split('_')[1])
         with app.app_context():
@@ -235,6 +242,9 @@ async def delete_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(f"Deleted #{eid}")
     except:
         await update.message.reply_text("Error deleting")
+
+async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text("Use commands or menu.", reply_markup=MARKUP_MAIN)
 
 # --- Setup ---
 if TOKEN:
@@ -256,6 +266,7 @@ if TOKEN:
     )
     
     ptb_app.add_handler(CommandHandler('start', start))
+    ptb_app.add_handler(CommandHandler('help', help_command))
     ptb_app.add_handler(MessageHandler(filters.Regex(r'^/del_'), delete_handler))
     ptb_app.add_handler(conv)
 else:
@@ -275,4 +286,6 @@ async def webhook():
     return "OK"
 
 if __name__ == '__main__':
-    app.run(port=5000, debug=True)
+    # PORT is set by Render environment
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host='0.0.0.0', port=port)
