@@ -2,3 +2,4 @@ flask
 python-telegram-bot
 python-dotenv
 flask-sqlalchemy
+gunicorn
